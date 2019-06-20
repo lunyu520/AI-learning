@@ -1,0 +1,86 @@
+# 现有一组苹果的数据集，存储在apple.txt文件中。
+# 每条记录，p1是含水量，p2是酸甜度，y标签表示苹果的好坏：1表示好，0表示不好
+# 利用神经网络模型，完成以下要求：
+# 完成数据集的加载、初始化，洗牌，将数据集合理分割成训练集和测试集
+# 实现激活函数及其导数
+# 实现代价函数
+# 实现梯度下降并记录代价函数
+# 完成模型的训练，并计算在训练集上的准确率
+# 画出代价函数曲线
+# 在测试集上完成了预测，并计算在测试集上的准确率
+# 与下面的注释的数据一样
+import numpy as np
+from numpy import *
+import matplotlib.pylab as plt
+# X1 = [0.697,0.774,0.634,0.608,0.556,0.403,0.481,0.437,0.666,0.243,0.245,0.343,0.639,0.657,0.360,0.593,0.719]
+# X2 = [0.460,0.376,0.264,0.318,0.215,0.237,0.149,0.211,0.091,0.267,0.057,0.099,0.161,0.198,0.370,0.042,0.103]
+# Y = [1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0]
+data = np.loadtxt('apple.txt', delimiter=',')
+X1 = data[:, 0]
+X2 = data[:, 1]
+Y = data[:, -1]
+alpha = 0.5
+iternum = 10000
+# 预处理
+m = len(X1)
+X = np.c_[np.ones(m), X1, X2]
+Y = np.c_[Y]
+# 洗牌
+order = np.random.permutation(m)
+X = X[order]
+Y = Y[order]
+# 数据切分
+trainnum = int(0.75*m)
+trainX, testX = np.split(X, [trainnum])
+trainY, testY = np.split(Y, [trainnum])
+# 实现激活函数及其导数
+def g(z, deriv=False):
+    if deriv==True:
+        return z*(1-z)
+    return 1.0/(1.0+np.exp(-z))
+# 前向传播
+def model(a1, theta1, theta2):
+    z2 = a1.dot(theta1)
+    a2 = g(z2)
+    z3 = a2.dot(theta2)
+    a3 = g(z3)
+    return a2, a3
+# 实现代价函数
+def costFuntion(h, y, m):
+    j = -1.0/m*(np.dot(y.T, log(h))+np.dot((1-y).T, log(1-h)))
+    return j
+# 反向传播
+def BP(a1, a2, a3, y, theta1, theta2, alpha):
+    m = len(a1)
+    delta3 = a3-y
+    delta2 = delta3.dot(theta2.T)*g(a2, True)
+    deltatheta1 = 1.0/m*(a1.T.dot(delta2))
+    deltatheta2 = 1.0/m*(a2.T.dot(delta3))
+    theta1 -= alpha*deltatheta1
+    theta2 -= alpha*deltatheta2
+    return theta1, theta2
+# 定义梯度下降函数
+def granDesc(a1, y, alpha, iternum):
+    m, n = a1.shape
+    np.random.seed(1)
+    theta1 = np.random.random((n, 17))-1
+    theta2 = np.random.random((17, 1))-1
+    jarry = np.zeros(iternum)
+    for i in range(iternum):
+        a2, a3 = model(a1, theta1, theta2)
+        jarry[i] = costFuntion(a3, y, m)
+        theta1, theta2 = BP(a1, a2, a3, y, theta1, theta2, alpha)
+    return jarry, theta1, theta2
+jarry, theta1, theta2 = granDesc(trainX, trainY, alpha, iternum)
+plt.plot(jarry)
+plt.show()
+# 计算准确率
+def scor(h, y):
+    m = len(h)
+    count = 0
+    for i in range(m):
+        if np.where(h[i] >= 0.5, 1, 0) == y[i]:
+            count += 1
+    return count/m
+a2, a3 = model(testX, theta1, theta2)
+print(scor(a3, testY))
